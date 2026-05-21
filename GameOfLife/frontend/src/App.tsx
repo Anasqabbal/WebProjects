@@ -1,99 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const ROWS = 20;
-const COLS = 20;
+const ROWS = 12;
+const COLS = 12;
 
 const createEmptyGrid = () => 
   Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
 
 const createRandomGrid = () => 
   Array(ROWS).fill(null).map(() =>
-    Array(COLS).fill(null).map(() => (Math.random() > 0.8 ? 1 : 0))
+    Array(COLS).fill(null).map(() => (Math.random() > 0.75 ? 1 : 0))
   );
 
-const loadPresetGrid = (preset: string): number[][] => {
-  const newGrid = createEmptyGrid();
-  const midR = Math.floor(ROWS / 2);
-  const midC = Math.floor(COLS / 2);
-
-  switch (preset) {
-    case 'glider':
-      newGrid[midR - 1][midC] = 1;
-      newGrid[midR][midC + 1] = 1;
-      newGrid[midR + 1][midC - 1] = 1;
-      newGrid[midR + 1][midC] = 1;
-      newGrid[midR + 1][midC + 1] = 1;
-      break;
-    case 'pulsar':
-      const pulsarOffsets = [2, 3, 4, 8, 9, 10];
-      pulsarOffsets.forEach(offset => {
-        // Horizontal lines
-        newGrid[midR - 6][midC - offset] = 1;
-        newGrid[midR - 6][midC + offset] = 1;
-        newGrid[midR - 1][midC - offset] = 1;
-        newGrid[midR - 1][midC + offset] = 1;
-        newGrid[midR + 1][midC - offset] = 1;
-        newGrid[midR + 1][midC + offset] = 1;
-        newGrid[midR + 6][midC - offset] = 1;
-        newGrid[midR + 6][midC + offset] = 1;
-
-        // Vertical lines
-        newGrid[midR - offset][midC - 6] = 1;
-        newGrid[midR - offset][midC - 1] = 1;
-        newGrid[midR - offset][midC + 1] = 1;
-        newGrid[midR - offset][midC + 6] = 1;
-        newGrid[midR + offset][midC - 6] = 1;
-        newGrid[midR + offset][midC - 1] = 1;
-        newGrid[midR + offset][midC + 1] = 1;
-        newGrid[midR + offset][midC + 6] = 1;
-      });
-      break;
-    case 'toad':
-      newGrid[midR][midC - 1] = 1;
-      newGrid[midR][midC] = 1;
-      newGrid[midR][midC + 1] = 1;
-      newGrid[midR + 1][midC - 2] = 1;
-      newGrid[midR + 1][midC - 1] = 1;
-      newGrid[midR + 1][midC] = 1;
-      break;
-    case 'beacon':
-      newGrid[midR - 2][midC - 2] = 1;
-      newGrid[midR - 2][midC - 1] = 1;
-      newGrid[midR - 1][midC - 2] = 1;
-      newGrid[midR - 1][midC - 1] = 1;
-      newGrid[midR][midC] = 1;
-      newGrid[midR][midC + 1] = 1;
-      newGrid[midR + 1][midC] = 1;
-      newGrid[midR + 1][midC + 1] = 1;
-      break;
-    case 'pentadecathlon':
-      for (let c = midC - 5; c < midC + 5; c++) {
-        if (c >= 0 && c < COLS) {
-          newGrid[midR][c] = 1;
-        }
-      }
-      break;
-    case 'random':
-      return createRandomGrid();
-    default:
-      break;
-  }
-  return newGrid;
+const createInitialStates = () => {
+  const g = createRandomGrid();
+  const a = g.map(row => row.map(cell => (cell === 1 ? 1 : 0)));
+  return { grid: g, ages: a };
 };
 
 const App: React.FC = () => {
-  const [grid, setGrid] = useState<number[][]>(createRandomGrid());
+  const [initialData] = useState(() => createInitialStates());
+  const [grid, setGrid] = useState<number[][]>(initialData.grid);
+  const [ages, setAges] = useState<number[][]>(initialData.ages);
   const [generation, setGeneration] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [speed, setSpeed] = useState<number>(1000); // Autoplay speed in ms
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{ r: number | null; c: number | null }>({ r: null, c: null });
   
   const transitionTimeoutRef = useRef<any>(null);
-
-  // Derive stats
-  const liveCellsCount = grid.flat().filter(cell => cell === 1 || cell === 3).length;
-  const boardDensity = ((liveCellsCount / (ROWS * COLS)) * 100).toFixed(1);
 
   const toggleCell = (r: number, c: number) => {
     if (isLoading) return;
@@ -102,16 +36,25 @@ const App: React.FC = () => {
       clearTimeout(transitionTimeoutRef.current);
     }
 
+    const wasAlive = grid[r][c] === 1 || grid[r][c] === 3;
     const newGrid = grid.map((row, rowIndex) =>
       row.map((val, colIndex) => {
         if (rowIndex === r && colIndex === c) {
-          return (val === 1 || val === 3) ? 0 : 1;
+          return wasAlive ? 0 : 1;
         }
         return val;
       })
     );
     
     setGrid(newGrid);
+    setAges(prev => prev.map((row, rowIndex) =>
+      row.map((val, colIndex) => {
+        if (rowIndex === r && colIndex === c) {
+          return wasAlive ? 0 : 1;
+        }
+        return val;
+      })
+    ));
     handleNextGen(newGrid);
   };
 
@@ -119,7 +62,6 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Clean cell states (convert visual indicators 2 and 3 back to standard 0 and 1)
       const normalizedGrid = currentGrid.map(row =>
         row.map(cell => (cell === 1 || cell === 3 ? 1 : 0))
       );
@@ -144,7 +86,6 @@ const App: React.FC = () => {
 
         const newGrid = data.grid;
         
-        // Calculate transition states
         const transitionGrid = normalizedGrid.map((row, r) =>
           row.map((cell, c) => {
             const nextVal = newGrid[r][c];
@@ -155,7 +96,7 @@ const App: React.FC = () => {
             } else if (!isCurrentlyAlive && nextVal === 1) {
               return 3; // Revived (green)
             } else if (isCurrentlyAlive && nextVal === 1) {
-              return 1; // Remains alive (cyan)
+              return 1; // Remains alive (cyan/purple)
             } else {
               return 0; // Remains dead
             }
@@ -163,21 +104,30 @@ const App: React.FC = () => {
         );
 
         setGrid(transitionGrid);
+        setAges(prevAges => prevAges.map((row, r) =>
+          row.map((ageVal, c) => {
+            const nextVal = newGrid[r][c];
+            const wasAlive = normalizedGrid[r][c] === 1;
+            if (nextVal === 1) {
+              return wasAlive ? ageVal + 1 : 1;
+            } else {
+              return 0;
+            }
+          })
+        ));
         setGeneration((prev) => prev + 1);
 
-        // Adjust animation timeouts relative to speed
-        const transitionDuration = Math.min(speed - 100, 800);
         transitionTimeoutRef.current = setTimeout(() => {
           setGrid((prevGrid) =>
             prevGrid.map((row) =>
               row.map((cell) => {
-                if (cell === 2) return 0; // Red -> Dead
-                if (cell === 3) return 1; // Green -> Stable Alive (1)
+                if (cell === 2) return 0;
+                if (cell === 3) return 1;
                 return cell;
               })
             )
           );
-        }, transitionDuration);
+        }, 1500);
 
       } else {
         throw new Error('Invalid grid format returned by backend');
@@ -196,14 +146,7 @@ const App: React.FC = () => {
       clearTimeout(transitionTimeoutRef.current);
     }
     setGrid(createEmptyGrid());
-    setGeneration(0);
-    setIsPlaying(false);
-    setError(null);
-  };
-
-  const handleLoadPreset = (presetName: string) => {
-    const newGrid = loadPresetGrid(presetName);
-    setGrid(newGrid);
+    setAges(createEmptyGrid());
     setGeneration(0);
     setIsPlaying(false);
     setError(null);
@@ -214,266 +157,272 @@ const App: React.FC = () => {
     if (isPlaying) {
       intervalId = setInterval(() => {
         handleNextGen(grid);
-      }, speed);
+      }, 1800);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isPlaying, grid, speed]);
+  }, [isPlaying, grid]);
 
-  const cellTransitionMs = Math.min(speed - 100, 800);
+  const activeCellsCount = grid.reduce((acc, row) => 
+    acc + row.filter(cell => cell === 1 || cell === 3).length, 0
+  );
+  const density = ((activeCellsCount / (ROWS * COLS)) * 100).toFixed(1);
+
+  const totalHeight = ages.reduce((acc, row, r) => 
+    acc + row.reduce((rowAcc, age, c) => {
+      const isAlive = grid[r][c] === 1 || grid[r][c] === 3;
+      const heightPx = isAlive ? Math.min(76, 16 + (age - 1) * 12) : 0;
+      return rowAcc + heightPx;
+    }, 0), 0
+  );
+  const avgHeight = activeCellsCount > 0 ? (totalHeight / activeCellsCount).toFixed(0) : '0';
+
+  let systemStatus = 'IDLE';
+  if (error) systemStatus = 'FAULT';
+  else if (isLoading) systemStatus = 'SYNCING';
+  else if (isPlaying) systemStatus = 'AUTO-RUN';
+  else if (activeCellsCount > 0) systemStatus = 'STABLE';
 
   return (
-    <div className="min-h-screen tech-bg text-slate-100 flex flex-col items-center p-4 md:p-8 relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.05)_0%,transparent_80%)] pointer-events-none" />
+    <div className="min-h-screen tech-bg text-slate-100 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
+      {/* Immersive background aura effects */}
+      <div className="glow-blob-1 pointer-events-none" />
+      <div className="glow-blob-2 pointer-events-none" />
       
-      {/* Container Dashboard Wrapper */}
-      <div className="z-10 w-full max-w-7xl flex flex-col gap-6">
+      {/* Dynamic scanline overlay effect */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.04)_0%,transparent_75%)] pointer-events-none" />
+      
+      <div className="z-10 w-full max-w-2xl flex flex-col items-center gap-6">
         
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-5 gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-cyan-400 animate-pulse glow-cyan" />
-              <h1 className="text-3xl font-black font-tech uppercase tracking-widest bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-400 bg-clip-text text-transparent">
-                Conway's Game of Life
-              </h1>
-            </div>
-            <p className="text-slate-400 text-xs md:text-sm mt-1 uppercase tracking-wider font-semibold">
-              Visual companion for the 42 Network Exam06 &bull; Orthodox Canonical Class Engine
-            </p>
+        {/* Futuristic Dashboard Header */}
+        <div className="text-center flex flex-col items-center">
+          <div className="flex items-center gap-2 mb-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-[9px] font-mono tracking-widest text-purple-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+            42_NETWORK // EXAM_06 CORE
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 bg-slate-900 border border-slate-800 px-3 py-1 rounded">
-              Status: <span className={isPlaying ? "text-green-400" : "text-amber-500"}>{isPlaying ? "ACTIVE" : "PAUSED"}</span>
-            </span>
-          </div>
-        </header>
+          <h1 className="text-4xl font-extrabold tracking-[0.18em] bg-gradient-to-r from-purple-100 via-violet-300 to-fuchsia-100 bg-clip-text text-transparent uppercase font-tech">
+            LIFE ENGINE
+          </h1>
+          <p className="text-purple-500/70 text-[10px] uppercase tracking-[0.22em] mt-1 font-semibold">
+            Bi-directional Socket Simulation Console
+          </p>
+        </div>
 
-        {/* 3-Column Dashboard Layout */}
-        <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Central Operations Panel */}
+        <div className="w-full flex flex-col items-center relative">
           
-          {/* Column 1: Controls & Config (4 cols) */}
-          <section className="lg:col-span-4 flex flex-col gap-6">
-            
-            {/* Live Stats */}
-            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col gap-4 relative overflow-hidden">
-              <div className="scanner-line" />
-              <h2 className="text-xs uppercase font-bold tracking-widest text-cyan-400 border-b border-slate-800 pb-2">
-                SYSTEM TELEMETRY
-              </h2>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-3 text-center">
-                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Generation</div>
-                  <div className="text-xl font-black font-tech text-cyan-400 mt-1">{generation}</div>
-                </div>
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-3 text-center">
-                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Live Cells</div>
-                  <div className="text-xl font-black font-tech text-emerald-400 mt-1">{liveCellsCount}</div>
-                </div>
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-3 text-center">
-                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Density</div>
-                  <div className="text-xl font-black font-tech text-indigo-400 mt-1">{boardDensity}%</div>
-                </div>
+          {/* Cybernetic Accent Decals */}
+          <div className="absolute top-3 left-4 text-[7px] font-mono text-purple-600/70 tracking-widest pointer-events-none uppercase">
+            loc.sys // core_matrix
+          </div>
+          <div className="absolute top-3 right-4 text-[7px] font-mono text-purple-600/70 tracking-widest pointer-events-none uppercase">
+            [x2D // 3D_CITY]
+          </div>
+
+          {/* Telemetry Dashboard Component */}
+          <div className="w-full flex flex-col gap-1.5 mb-6 mt-1.5">
+            <div className="w-full grid grid-cols-3 gap-2 p-2 bg-slate-950/70 rounded-xl border border-slate-800/60 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              <div className="flex flex-col items-center border-r border-slate-800/60 py-0.5">
+                <span className="text-slate-600 text-[8px] font-bold">status</span>
+                <span className={`font-bold font-tech mt-0.5 flex items-center gap-1.5 ${
+                  systemStatus === 'FAULT' ? 'text-rose-400' :
+                  systemStatus === 'SYNCING' ? 'text-amber-400' :
+                  systemStatus === 'AUTO-RUN' ? 'text-emerald-400' :
+                  systemStatus === 'STABLE' ? 'text-purple-400' : 'text-slate-500'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    systemStatus === 'FAULT' ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' :
+                    systemStatus === 'SYNCING' ? 'bg-amber-500 animate-ping' :
+                    systemStatus === 'AUTO-RUN' ? 'bg-emerald-500 animate-ping' :
+                    systemStatus === 'STABLE' ? 'bg-purple-500 shadow-[0_0_8px_#a855f7]' : 'bg-slate-600'
+                  }`} />
+                  {systemStatus}
+                </span>
+              </div>
+              <div className="flex flex-col items-center border-r border-slate-800/60 py-0.5">
+                <span className="text-slate-600 text-[8px] font-bold">generation</span>
+                <span className="font-bold text-slate-200 mt-0.5 font-tech">{generation}</span>
+              </div>
+              <div className="flex flex-col items-center py-0.5">
+                <span className="text-slate-600 text-[8px] font-bold">avg height</span>
+                <span className="font-bold text-slate-200 mt-0.5 font-tech">
+                  {avgHeight}m <span className="text-slate-500 text-[8px]">({activeCellsCount})</span>
+                </span>
               </div>
             </div>
-
-            {/* Presets & Core Controls */}
-            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col gap-5">
-              <h2 className="text-xs uppercase font-bold tracking-widest text-cyan-400 border-b border-slate-800 pb-2">
-                SIMULATION CONSOLE
-              </h2>
-              
-              {/* Presets Selector */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Preset Templates</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => handleLoadPreset('glider')}
-                    className="text-xs bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-slate-800 hover:border-cyan-400 text-slate-300 font-semibold py-2 px-3 rounded transition-all duration-200"
-                  >
-                    🚀 Glider Spaceship
-                  </button>
-                  <button 
-                    onClick={() => handleLoadPreset('pulsar')}
-                    className="text-xs bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-slate-800 hover:border-cyan-400 text-slate-300 font-semibold py-2 px-3 rounded transition-all duration-200"
-                  >
-                    🌀 Pulsar Osc. (P3)
-                  </button>
-                  <button 
-                    onClick={() => handleLoadPreset('toad')}
-                    className="text-xs bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-slate-800 hover:border-cyan-400 text-slate-300 font-semibold py-2 px-3 rounded transition-all duration-200"
-                  >
-                    🐸 Toad Oscillator
-                  </button>
-                  <button 
-                    onClick={() => handleLoadPreset('beacon')}
-                    className="text-xs bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-slate-800 hover:border-cyan-400 text-slate-300 font-semibold py-2 px-3 rounded transition-all duration-200"
-                  >
-                    🚨 Beacon Osc.
-                  </button>
-                  <button 
-                    onClick={() => handleLoadPreset('pentadecathlon')}
-                    className="text-xs bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-slate-800 hover:border-cyan-400 text-slate-300 font-semibold py-2 px-3 rounded transition-all duration-200"
-                  >
-                    📏 Pentadecathlon
-                  </button>
-                  <button 
-                    onClick={() => handleLoadPreset('random')}
-                    className="text-xs bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-slate-800 hover:border-cyan-400 text-slate-300 font-semibold py-2 px-3 rounded transition-all duration-200"
-                  >
-                    🎲 Random Matrix
-                  </button>
-                </div>
-              </div>
-
-              {/* Speed Controller */}
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tick Rate Interval</label>
-                  <span className="text-xs font-mono font-bold text-cyan-400">{speed}ms</span>
-                </div>
-                <input 
-                  type="range"
-                  min="200"
-                  max="2000"
-                  step="50"
-                  value={speed}
-                  onChange={(e) => setSpeed(Number(e.target.value))}
-                  className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-cyan-400 border border-slate-800"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 font-semibold">
-                  <span>FAST (200ms)</span>
-                  <span>SLOW (2000ms)</span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2 border-t border-slate-800/80">
-                <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className={`flex-1 py-2.5 rounded font-bold text-xs uppercase tracking-wider transition-all duration-200 border ${
-                    isPlaying 
-                      ? 'bg-amber-500 border-amber-500 text-slate-950 hover:bg-amber-600 hover:shadow-[0_0_15px_rgba(245,158,11,0.25)]' 
-                      : 'bg-cyan-950/20 border-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 hover:shadow-[0_0_15px_rgba(34,211,238,0.25)]'
-                  }`}
-                >
-                  {isPlaying ? '⏸️ Pause Auto' : '▶️ Autoplay'}
-                </button>
-                <button
-                  onClick={handleClear}
-                  className="px-4 py-2.5 rounded font-bold text-xs uppercase tracking-wider transition-all duration-200 border border-red-500/20 bg-red-950/15 text-red-400 hover:bg-red-500 hover:text-slate-950 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-                >
-                  🧹 Clear
-                </button>
-              </div>
+            {/* Live pop indicator bar */}
+            <div className="w-full h-1 bg-slate-950 rounded-full overflow-hidden border border-purple-950/35">
+              <div 
+                className="h-full bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 transition-all duration-500 ease-out" 
+                style={{ width: `${Math.min(100, parseFloat(density))}%` }}
+              />
             </div>
+          </div>
 
-          </section>
+          {error && (
+            <div className="w-full mb-5 p-3 rounded-xl bg-rose-950/20 border border-rose-800/40 text-rose-300 text-xs text-center flex flex-col gap-0.5">
+              <span className="font-bold font-mono text-[9px] tracking-wider text-rose-400">CONSOLE OUT // FAULT:</span>
+              <span className="font-mono text-[10px] text-rose-300">{error}</span>
+            </div>
+          )}
 
-          {/* Column 2: Grid Board (5 cols) */}
-          <section className="lg:col-span-5 flex flex-col items-center">
-            <div className="w-full bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col items-center relative overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
-              
-              {/* Telemetry calculating label */}
-              <div className="w-full flex justify-between items-center mb-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <span>Viewport: {COLS}x{ROWS}</span>
-                {isLoading && (
-                  <span className="text-cyan-400 animate-pulse text-[10px] lowercase italic font-mono">calculating engine...</span>
-                )}
-              </div>
+          {/* Interactive 3D Isometric Tactical Board */}
+          <div className="flex flex-col items-center w-full mt-16 mb-8">
+            <div className="isometric-grid-container w-full flex justify-center">
+              <div 
+                className="isometric-grid grid gap-[4px] p-4 bg-transparent"
+                style={{ gridTemplateColumns: `repeat(${COLS + 1}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: ROWS + 1 }).map((_, gridRow) =>
+                  Array.from({ length: COLS + 1 }).map((_, gridCol) => {
+                    // Empty Top-Left corner
+                    if (gridRow === 0 && gridCol === 0) {
+                      return (
+                        <div 
+                          key="coord-corner" 
+                          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center coord-label-cell"
+                        />
+                      );
+                    }
+                    
+                    // Column Letters (A-L) flat on the 3D plane
+                    if (gridRow === 0 && gridCol > 0) {
+                      const cIndex = gridCol - 1;
+                      const colChar = String.fromCharCode(65 + cIndex);
+                      const isHighlighted = hoveredCell.c === cIndex;
+                      return (
+                        <div 
+                          key={`col-label-${cIndex}`} 
+                          className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center font-tech text-[10px] font-bold transition-all duration-200 coord-label-cell ${
+                            isHighlighted ? 'text-purple-400 scale-125 font-black drop-shadow-[0_0_6px_#a855f7]' : 'text-purple-700/60'
+                          }`}
+                        >
+                          {colChar}
+                        </div>
+                      );
+                    }
 
-              {/* Grid Box */}
-              <div className="bg-slate-950/95 p-3 rounded-lg border border-slate-800 shadow-inner w-full flex justify-center overflow-auto">
-                <div 
-                  className="grid gap-[1px] bg-slate-900 border border-slate-800/80 p-[1px] rounded" 
-                  style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
-                >
-                  {grid.map((row, r) =>
-                    row.map((cell, c) => (
+                    // Row Numbers (01-12) flat on the 3D plane
+                    if (gridRow > 0 && gridCol === 0) {
+                      const rIndex = gridRow - 1;
+                      const rowStr = String(gridRow).padStart(2, '0');
+                      const isHighlighted = hoveredCell.r === rIndex;
+                      return (
+                        <div 
+                          key={`row-label-${rIndex}`} 
+                          className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center font-tech text-[10px] font-bold transition-all duration-200 coord-label-cell ${
+                            isHighlighted ? 'text-purple-400 scale-125 font-black drop-shadow-[0_0_6px_#a855f7]' : 'text-purple-700/60'
+                          }`}
+                        >
+                          {rowStr}
+                        </div>
+                      );
+                    }
+
+                    // Grid Cells
+                    const r = gridRow - 1;
+                    const c = gridCol - 1;
+                    const cell = grid[r][c];
+                    const age = ages[r][c];
+                    const heightPx = cell === 0 ? 0 : Math.min(76, 16 + (age - 1) * 12);
+
+                    return (
                       <button
                         key={`${r}-${c}`}
                         onClick={() => toggleCell(r, c)}
-                        className={`
-                          w-5 h-5 sm:w-[22px] sm:h-[22px] focus:outline-none rounded-sm transition-all
-                          ${cell === 1 
-                            ? 'bg-[#21d2ed] glow-cyan scale-[0.92]' 
-                            : cell === 2
-                            ? 'bg-gradient-to-br from-red-500 to-rose-600 glow-red scale-[0.88]'
-                            : cell === 3
-                            ? 'bg-gradient-to-br from-green-400 to-emerald-500 glow-green scale-95'
-                            : 'bg-slate-950 hover:bg-slate-900 border-[0.5px] border-slate-900 hover:border-slate-800'
-                          }
-                        `}
-                        style={{
-                          transitionDuration: `${cellTransitionMs}ms`
-                        }}
-                        aria-label={`Cell at r${r} c${c}`}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
+                        onMouseEnter={() => setHoveredCell({ r, c })}
+                        onMouseLeave={() => setHoveredCell({ r: null, c: null })}
+                        className="group w-8 h-8 sm:w-9 sm:h-9 focus:outline-none grid-plot rounded-[4px]"
+                        aria-label={`Cell plot at ${String.fromCharCode(65 + c)}${r + 1}`}
+                        style={{ 
+                          '--h': `${heightPx}px`,
+                          zIndex: (gridRow * 100) + gridCol
+                        } as React.CSSProperties}
+                      >
+                        {/* Dead plot: Hover hologram */}
+                        {cell === 0 && (
+                          <div className="hologram-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="holo-roof" />
+                            <div className="holo-south" />
+                            <div className="holo-east" />
+                          </div>
+                        )}
 
-              {error && (
-                <div className="w-full mt-4 p-3 rounded bg-red-950/40 border border-red-800/50 text-red-200 text-xs text-center flex flex-col gap-1">
-                  <span className="font-bold">SYSTEM FAULT DETAILS:</span>
-                  <span className="font-mono">{error}</span>
-                </div>
-              )}
-            </div>
-          </section>
+                        {/* Stable skyscraper */}
+                        {cell === 1 && (
+                          <div className="skyscraper">
+                            <div className="sky-roof" />
+                            <div className="sky-south" />
+                            <div className="sky-east" />
+                          </div>
+                        )}
 
-          {/* Column 3: Telemetry Instructions & Concepts (3 cols) */}
-          <section className="lg:col-span-3 flex flex-col gap-6">
-            
-            {/* Visual rules */}
-            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col gap-4">
-              <h2 className="text-xs uppercase font-bold tracking-widest text-cyan-400 border-b border-slate-800 pb-2">
-                CELLULAR STATES
-              </h2>
-              <div className="flex flex-col gap-3 text-xs text-slate-300">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-3 w-3 rounded bg-[#21d2ed] glow-cyan shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-cyan-400">Stable (#21d2ed)</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Survived from the previous generation tick.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-3 w-3 rounded bg-gradient-to-br from-green-400 to-emerald-500 glow-green shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-green-400">Revived (Green)</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Empty cell with exactly 3 neighbors transitioning to life.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-3 w-3 rounded bg-gradient-to-br from-red-500 to-rose-600 glow-red shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-red-400">Dying (Red)</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Cell decaying due to over- or under-population.</div>
-                  </div>
-                </div>
+                        {/* Dying skyscraper (Collapsing) */}
+                        {cell === 2 && (
+                          <div className="skyscraper">
+                            <div className="sky-roof dying" />
+                            <div className="sky-south dying" />
+                            <div className="sky-east dying" />
+                          </div>
+                        )}
+
+                        {/* Revived skyscraper (Growing green construction) */}
+                        {cell === 3 && (
+                          <div className="skyscraper">
+                            <div className="sky-roof revived" />
+                            <div className="sky-south revived" />
+                            <div className="sky-east revived" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
+          </div>
 
-            {/* 42 Network Exam06 Info */}
-            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col gap-3">
-              <h2 className="text-xs uppercase font-bold tracking-widest text-cyan-400 border-b border-slate-800 pb-2">
-                42 EXAM06 COMPANION
-              </h2>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                In the 42 Network curriculum, <strong>Exam06</strong> (Mini-Serv) tests mastery of multiplexed socket programming, system calls, and I/O routing under strict memory and compliance rules.
-              </p>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                This app showcases a visual representation of standard input/output mapping: Express spawns the OCF C++ game execution engine as a child subprocess, pipes grid states to its standard input, and displays the processed results instantly on the frontend grid.
-              </p>
+          {/* Minimalist Tech Operations Control */}
+          <div className="mt-4 flex gap-4 justify-center w-full z-10">
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className={`flex-1 py-3 rounded-xl font-bold font-tech text-xs uppercase tracking-widest transition-all duration-300 border ${
+                isPlaying 
+                  ? 'bg-amber-500/10 border-amber-400/80 text-amber-300 hover:bg-amber-500 hover:text-slate-950 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)]' 
+                  : 'bg-purple-500/10 border-purple-400/40 text-purple-400 hover:bg-[#a855f7] hover:text-slate-950 hover:shadow-[0_0_20px_rgba(168,85,247,0.45)]'
+              }`}
+            >
+              {isPlaying ? 'PAUSE SYS' : 'RUN ENGINE'}
+            </button>
+
+            <button
+              onClick={handleClear}
+              className="px-8 py-3 rounded-xl font-bold font-tech text-xs uppercase tracking-widest transition-all duration-300 border border-rose-500/20 bg-rose-950/10 text-rose-400 hover:bg-rose-500 hover:text-slate-950 hover:shadow-[0_0_20px_rgba(244,63,94,0.35)]"
+            >
+              FLUSH
+            </button>
+          </div>
+        </div>
+
+        {/* Legend Panel */}
+        <div className="w-full bg-slate-950/45 border border-purple-950/30 rounded-2xl p-4 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+          <div className="flex justify-around items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-gradient-to-br from-[#c084fc] to-[#7c3aed] border border-purple-400/40 shadow-[0_0_6px_rgba(168,85,247,0.6)]" />
+              <span className="text-slate-400 font-bold">Stable</span>
             </div>
+            <div className="flex items-center gap-2.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-gradient-to-br from-[#34d399] to-[#059669] border border-emerald-400/40 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+              <span className="text-slate-400 font-bold">Revived</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-gradient-to-br from-[#f87171] to-[#dc2626] border border-rose-400/40 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+              <span className="text-slate-400 font-bold">Dying</span>
+            </div>
+          </div>
+        </div>
 
-          </section>
-
-        </main>
       </div>
     </div>
   );

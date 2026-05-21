@@ -1,60 +1,300 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;750;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;750;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
 }
 
 body {
   margin: 0;
-  background-color: #030712; /* Dark slate-950 */
-  color: #f3f4f6;
+  background-color: #000000;
+  color: #f3e8ff;
   overflow-x: hidden;
+}
+
+/* Immersive Obsidian & Purple City Grid */
+.tech-bg {
+  background-color: #000000;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(30, 11, 54, 0.25) 0%, #000000 100%),
+    linear-gradient(rgba(147, 51, 234, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147, 51, 234, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
+  background-position: center;
   position: relative;
 }
 
-/* Custom Grid Tech Background */
-.tech-bg {
-  background-color: #030712;
-  background-image: 
-    linear-gradient(rgba(6, 182, 212, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(6, 182, 212, 0.04) 1px, transparent 1px);
-  background-size: 30px 30px;
-  background-position: center;
+/* CRT style digital overlay */
+.tech-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(15, 2, 30, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 6px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.15;
 }
 
-.glow-cyan {
-  box-shadow: 0 0 15px rgba(33, 210, 237, 0.4);
+/* Violet glowing blobs */
+.glow-blob-1 {
+  position: absolute;
+  top: 10%;
+  left: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+  animation: float-slow 25s ease-in-out infinite alternate;
 }
 
-.glow-green {
-  box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+.glow-blob-2 {
+  position: absolute;
+  bottom: 10%;
+  right: 5%;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(74, 20, 140, 0.09) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+  animation: float-slow 30s ease-in-out infinite alternate-reverse;
 }
 
-.glow-red {
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+@keyframes float-slow {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(50px, -50px) scale(1.1);
+  }
+  100% {
+    transform: translate(-25px, 30px) scale(0.95);
+  }
 }
 
 .font-tech {
   font-family: 'Orbitron', monospace;
+  letter-spacing: 0.08em;
 }
 
-/* Custom animations */
-@keyframes scanning {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100%); }
+/* 3D Isometric View Styles */
+.isometric-grid-container {
+  perspective: 1500px;
+  perspective-origin: 50% 25%;
+  transform-style: preserve-3d;
 }
 
-.scanner-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.4), transparent);
-  animation: scanning 4s linear infinite;
+.isometric-grid {
+  transform: rotateX(55deg) rotateZ(-45deg) scale(0.85);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+
+@media (max-width: 640px) {
+  .isometric-grid {
+    transform: rotateX(55deg) rotateZ(-45deg) scale(0.65);
+  }
+}
+
+@media (max-width: 480px) {
+  .isometric-grid {
+    transform: rotateX(55deg) rotateZ(-45deg) scale(0.5);
+  }
+}
+
+/* Grid Cell Plot */
+.grid-plot {
+  position: relative;
+  background: rgba(13, 5, 29, 0.35);
+  border: 1px solid rgba(139, 92, 246, 0.08);
+  box-shadow: inset 0 0 6px rgba(139, 92, 246, 0.03);
+  transform-style: preserve-3d;
+  transition: all 0.3s ease;
+}
+
+.grid-plot:hover {
+  background: rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+/* Coordinate label cell in 3D (lying flat on ground) */
+.coord-label-cell {
+  background: transparent;
+  border: none;
+  transform-style: preserve-3d;
   pointer-events: none;
 }
 
+/* 3D Skyscraper Object */
+.skyscraper {
+  position: absolute;
+  inset: 2px;
+  transform-style: preserve-3d;
+}
+
+/* Roof / Top Face */
+.sky-roof {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #c084fc, #7c3aed);
+  border: 1px solid #d8b4fe;
+  box-shadow: 0 0 15px rgba(167, 139, 250, 0.6), inset 0 0 4px rgba(255, 255, 255, 0.6);
+  transform: translateZ(var(--h));
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transform-style: preserve-3d;
+}
+
+/* South Face (Front-Left) */
+.sky-south {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  height: var(--h);
+  transform-origin: top;
+  transform: rotateX(-90deg);
+  background-image: 
+    linear-gradient(to top, rgba(15, 6, 28, 0.95), rgba(109, 40, 217, 0.95)),
+    repeating-linear-gradient(to top, transparent, transparent 5px, rgba(167, 139, 250, 0.3) 5px, rgba(167, 139, 250, 0.3) 7px);
+  background-blend-mode: overlay;
+  border-left: 1px solid rgba(167, 139, 250, 0.2);
+  border-right: 1px solid rgba(167, 139, 250, 0.2);
+  transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* East Face (Front-Right) */
+.sky-east {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: var(--h);
+  height: 100%;
+  transform-origin: left;
+  transform: rotateY(90deg);
+  background-image: 
+    linear-gradient(to top, rgba(10, 4, 19, 0.95), rgba(91, 33, 182, 0.95)),
+    repeating-linear-gradient(to right, transparent, transparent 5px, rgba(167, 139, 250, 0.25) 5px, rgba(167, 139, 250, 0.25) 7px);
+  background-blend-mode: overlay;
+  border-top: 1px solid rgba(167, 139, 250, 0.2);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.2);
+  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Revived Theme (Green neon top highlight) */
+.sky-roof.revived {
+  background: linear-gradient(135deg, #34d399, #059669);
+  border-color: #a7f3d0;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.6), inset 0 0 4px rgba(255, 255, 255, 0.6);
+}
+.sky-south.revived {
+  background-image: 
+    linear-gradient(to top, rgba(15, 6, 28, 0.95), rgba(5, 150, 105, 0.95)),
+    repeating-linear-gradient(to top, transparent, transparent 5px, rgba(52, 211, 153, 0.3) 5px, rgba(52, 211, 153, 0.3) 7px);
+}
+.sky-east.revived {
+  background-image: 
+    linear-gradient(to top, rgba(10, 4, 19, 0.95), rgba(4, 120, 87, 0.95)),
+    repeating-linear-gradient(to right, transparent, transparent 5px, rgba(52, 211, 153, 0.25) 5px, rgba(52, 211, 153, 0.25) 7px);
+}
+
+/* Dying Theme (Red neon top highlight) */
+.sky-roof.dying {
+  background: linear-gradient(135deg, #f87171, #dc2626);
+  border-color: #fca5a5;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.6), inset 0 0 4px rgba(255, 255, 255, 0.6);
+  animation: collapse-roof 1.5s ease-out forwards;
+}
+.sky-south.dying {
+  background-image: 
+    linear-gradient(to top, rgba(15, 6, 28, 0.95), rgba(220, 38, 38, 0.95)),
+    repeating-linear-gradient(to top, transparent, transparent 5px, rgba(239, 68, 68, 0.2) 5px, rgba(239, 68, 68, 0.2) 7px);
+  animation: collapse-south 1.5s ease-out forwards;
+}
+.sky-east.dying {
+  background-image: 
+    linear-gradient(to top, rgba(10, 4, 19, 0.95), rgba(185, 28, 28, 0.95)),
+    repeating-linear-gradient(to right, transparent, transparent 5px, rgba(239, 68, 68, 0.15) 5px, rgba(239, 68, 68, 0.15) 7px);
+  animation: collapse-east 1.5s ease-out forwards;
+}
+
+@keyframes collapse-roof {
+  0% { transform: translateZ(var(--h)) scale(1); opacity: 1; }
+  100% { transform: translateZ(0px) scale(0.2); opacity: 0; }
+}
+@keyframes collapse-south {
+  0% { height: var(--h); opacity: 1; }
+  100% { height: 0px; opacity: 0; }
+}
+@keyframes collapse-east {
+  0% { width: var(--h); opacity: 1; }
+  100% { width: 0px; opacity: 0; }
+}
+
+/* Hologram Wireframe skyscraper on Hover */
+.hologram-sky {
+  position: absolute;
+  inset: 2px;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.holo-roof {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(168, 85, 247, 0.6);
+  background: rgba(168, 85, 247, 0.05);
+  transform: translateZ(24px);
+  pointer-events: none;
+}
+.holo-south {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  height: 24px;
+  transform-origin: top;
+  transform: rotateX(-90deg);
+  border-left: 1px dashed rgba(168, 85, 247, 0.4);
+  border-right: 1px dashed rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.02);
+  pointer-events: none;
+}
+.holo-east {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 24px;
+  height: 100%;
+  transform-origin: left;
+  transform: rotateY(90deg);
+  border-top: 1px dashed rgba(168, 85, 247, 0.4);
+  border-bottom: 1px dashed rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.02);
+  pointer-events: none;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(2, 2, 5, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.4);
+}
