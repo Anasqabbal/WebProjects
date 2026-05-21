@@ -21,12 +21,13 @@
 
 ## 📖 Project Summary
 
-This project is a full-stack, containerized implementation of **Conway's Game of Life**. 
+This project is a full-stack, containerized implementation of **Conway's Game of Life**, designed as a visual companion and representation of the core concepts in **Exam06** (Mini-Serv / Sockets / I/O routing) which is a requirement of the **42 Network** curriculum.
 
 It runs on a multi-container Docker environment:
 * A **C++ game logic executable** compiled from OOP code.
 * A **Node.js/Express backend** acting as a lightweight wrapper that communicates with the C++ executable.
-* A **React & TypeScript frontend** styled with **Tailwind CSS** that presents the cell grid with smooth, 1.5-second color transitions (newborn cells are **green**, dying cells are **red**, and stable cells are **cyan**).
+* A **React & TypeScript frontend** styled with **Tailwind CSS** that presents the cell grid with smooth, responsive color transitions (newborn cells are **green**, dying cells are **red**, and stable cells are **cyan**).
+
 
 ---
 
