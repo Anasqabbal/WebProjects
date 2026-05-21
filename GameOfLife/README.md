@@ -21,7 +21,7 @@
 
 ## 📖 Project Summary
 
-This project is a full-stack, containerized implementation of **Conway's Game of Life**, designed as a visual companion and representation of the core concepts in **Exam06** (Mini-Serv / Sockets / I/O routing) which is a requirement of the **42 Network** curriculum.
+This project is a full-stack, containerized implementation of **Conway's Game of Life**, designed as an interactive visual companion and solution for the **exam05/leveltwo/gameoflife** exercise in the **42 Network** curriculum. This exercise is modeled after the classic **LeetCode 289: Game of Life (Medium)** problem.
 
 It runs on a multi-container Docker environment:
 * A **C++ game logic executable** compiled from OOP code.

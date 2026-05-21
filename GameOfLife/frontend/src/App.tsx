@@ -199,7 +199,7 @@ const App: React.FC = () => {
         <div className="text-center flex flex-col items-center">
           <div className="flex items-center gap-2 mb-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-[9px] font-mono tracking-widest text-purple-300">
             <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-            42_NETWORK // EXAM_06 CORE
+            42_NETWORK // EXAM_05 // LEVEL_TWO // GAMEOFLIFE
           </div>
           <h1 className="text-4xl font-extrabold tracking-[0.18em] bg-gradient-to-r from-purple-100 via-violet-300 to-fuchsia-100 bg-clip-text text-transparent uppercase font-tech">
             LIFE ENGINE
